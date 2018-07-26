@@ -3,97 +3,109 @@ import styled         from 'styled-components';
 import {Main}         from './components/Layout/Main';
 import {StyledButton} from './components/Layout/StyledButton';
 import {Grid}         from './components/Grid';
+import {Screen}       from './components/Canvas/Screen';
+import {Canvas}       from './components/Canvas/Canvas';
 
 
 const Wrapper = styled.div`
 	padding: 24px;
 `;
 
-const Flex = styled.div`
-	display: flex;
-`;
-
-const Cell = styled.div`
-	font-size: 10px;
-	width: 32px;
-	height: 32px;
-	display: flex;
-	overflow: hidden;
-	align-items: center;
-	justify-content: center;
-	background-color: #8d8d8d;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	&:hover{
-		background-color: #cccccc;
-	}
+const Display = styled.div`
+	width: 960px;
+	height: 540px;
+	margin: 16px auto;
 `;
 
 export class App extends React.Component{
 
 	state = {
+		width: 40,
+		height: 30,
 		progress: 0,
-		data2d: [],
-		gridWidth: 10,
-		gridHeight: 10,
+		buffer: [],
+		cellsize: 8,
 	};
 
-	onWidthChange = (e)=>{
+	grid = null;
+
+	componentDidMount(){
+		this.canvas = new Canvas(this.canvasRef);
+		window.addEventListener(Grid.eventName.GridGenerateProgress, this.onGenerateProgress);
+	}
+
+	componentDidUpdate(){
+		if (this.state.progress === 1){
+			this.drawGrid();
+		}
+	}
+
+	onGenerateProgress = ({detail})=>{
+		const {progress, buffer} = detail;
 		this.setState({
-			gridWidth: parseInt(e.currentTarget.value, 10),
+			progress,
+			buffer,
 		});
 	};
 
-	onHeightChange = (e)=>{
+	drawGrid = ()=>{
+		const grid = this.canvas.draw.grid({
+			...this.state,
+		});
+		this.canvas.ctx.drawImage(grid, 0, 0);
+	};
+
+	onChangeProp = e=>{
 		this.setState({
-			gridHeight: parseInt(e.currentTarget.value, 10),
+			[e.currentTarget.name]: parseInt(e.currentTarget.value, 10),
 		});
 	};
 
 	generateMap = ()=>{
-		const {gridWidth, gridHeight} = this.state;
-		this.setState({
-			data2d: [],
+
+		const {width, height} = this.state;
+
+		this.grid = new Grid({
+			width,
+			height,
 		});
-		this.grid = new Grid(gridWidth, gridHeight);
-		this.grid.onProgress = (e)=>{
-			this.setState({
-				progress: e.progress,
-			});
-			if (e.progress === 1){
-				this.setState({
-					data2d: this.grid.buffer2d,
-				});
-			}
-		};
-		this.grid.generate();
+
 	};
 
 	render(){
-		const {gridWidth, gridHeight} = this.state;
+		const {width, height, progress, cellsize} = this.state;
 		return (
 			<Main>
 				<Wrapper>
 					<div>
 						<span>grid width </span>
-						<input type={`text`} onChange={this.onWidthChange} value={gridWidth} placeholder={`grid width`}/>
+						<input
+							type={`text`}
+							name={`width`}
+							onChange={this.onChangeProp}
+							value={width}
+							placeholder={`grid width`}/>
 					</div>
 					<div>
 						<span>grid height </span>
-						<input type={`text`} onChange={this.onHeightChange} value={gridHeight} placeholder={`grid height`}/>
+						<input
+							type={`text`}
+							name={`height`}
+							onChange={this.onChangeProp}
+							value={height}
+							placeholder={`grid height`}/>
 					</div>
 					<StyledButton
 						onClick={this.generateMap}>generate map</StyledButton>
 					<div>
-						progress: {this.state.progress}
+						progress: {Math.floor(progress * 100)}
 					</div>
-					<div>
-						{this.state.data2d.map((row, id)=>(
-							<Flex key={id}>
-								{row.map(elem=>`${elem.row}, ${elem.col}`).map(elem=><Cell key={elem}>{elem}</Cell>)}
-							</Flex>
-						))}
-					</div>
+					<Display>
+						<Screen
+							width={width * cellsize}
+							height={height * cellsize}
+							innerRef={ref=>this.canvasRef = ref}/>
+					</Display>
 				</Wrapper>
 			</Main>
 		);
