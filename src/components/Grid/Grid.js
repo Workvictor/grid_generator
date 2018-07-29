@@ -20,8 +20,9 @@ export class Grid{
 	constructor({
 								width,
 								height,
-								smooth = 1,
+								smooth,
 								isAsync = true,
+								density = 0.5,
 							}){
 
 		this.props = {
@@ -30,6 +31,7 @@ export class Grid{
 			height,
 			smooth,
 			isAsync,
+			density,
 		};
 
 		if (isAsync){
@@ -153,10 +155,11 @@ export class Grid{
 
 		const getProgress = ()=>{
 
-			const gProgress = BUFFER.length / this.dataLength;
-			const sProgress = smoothIteraction / (this.dataLength * this.props.smooth);
+			const overallProgress = ()=>(BUFFER.length + smoothIteraction) / (this.dataLength + this.dataLength * this.props.smooth);
+			const bufferProgress = ()=>BUFFER.length / this.dataLength;
+			const smoothProgress = ()=>smoothIteraction / (this.dataLength * this.props.smooth);
 
-			return gProgress;
+			return this.props.smooth > 0 ? smoothProgress() : bufferProgress();
 		};
 
 		const dispatchProgressEvent = ()=>{
@@ -187,7 +190,7 @@ export class Grid{
 					BUFFER.push({
 						row: this.convert.indexToRow(BUFFER.length),
 						col: this.convert.indexToColumn(BUFFER.length),
-						value: value > 0.5 ? 1 : 0,
+						value: value > this.props.density ? 1 : 0,
 					});
 				}
 
@@ -200,22 +203,26 @@ export class Grid{
 				if (this.fulfilled){
 					raf.stop();
 					dispatchProgressEvent();
-					// if (this.props.smooth){
-					// 	this.processing.smooth(this.props.smooth);
-					// }
+					if (this.props.smooth > 0){
+						this.processing.smooth(this.props.smooth);
+					}
 				}
 			};
 			raf.init(loop);
 		};
 
-		const smooth = (smoothCount = 1)=>{
+		const smooth = (smoothCount = 0)=>{
 
 			let index = 0;
 
-			const threshold = 3;
+			const thresholdMax = 4;
+			const thresholdMin = thresholdMax-1;
 
 			const result = [];
+
 			let eventTime = window.performance.now();
+			dispatchProgressEvent();
+
 			const raf = new ActionFrame();
 
 			const loop = ()=>{
@@ -227,26 +234,28 @@ export class Grid{
 					const neighbors = this.getNeighbors(index);
 
 					index++;
+					smoothIteraction++;
 
-					if (neighbors.length > threshold){
+					if (neighbors.length > thresholdMax){
 						result.push({
+							...BUFFER[index],
 							value: 1,
 						});
 					}
 
-					if (neighbors.length < threshold){
+					if (neighbors.length < thresholdMin){
 						result.push({
+							...BUFFER[index],
 							value: 0,
 						});
 					}
 
-					if (neighbors.length === threshold){
+					if (neighbors.length === thresholdMin||neighbors.length === thresholdMax){
 						result.push({
-							value: BUFFER[index],
+							...BUFFER[index],
 						});
 					}
 
-					smoothIteraction++;
 					if (window.performance.now() - eventTime > eventTimeout){
 						eventTime = window.performance.now();
 						dispatchProgressEvent();
@@ -255,8 +264,9 @@ export class Grid{
 
 				if (index === this.dataLength){
 					smoothCount--;
-					setBuffer(result);
+					// setBuffer(result);
 					dispatchProgressEvent();
+
 					index = 0;
 				}
 
