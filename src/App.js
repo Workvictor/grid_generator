@@ -84,7 +84,7 @@ export class App extends React.Component{
 
   onDensityChange = (e)=>{
     this.setState({
-      density: e.value,
+      density: parseFloat(e.value),
     });
   };
 
@@ -130,12 +130,22 @@ export class App extends React.Component{
             </div>
             <div>
               <span>grid density </span>
-              <div>{density}</div>
+              <div>{Math.floor(density*100)}</div>
               <SlidePicker
                 min={0}
                 max={1}
+                value={density}
                 onChange={this.onDensityChange}
               />
+            </div>
+            <div>
+              <span>grid cellsize </span>
+              <input
+                type={`text`}
+                name={`cellsize`}
+                onChange={this.onChangeProp}
+                value={cellsize}
+                placeholder={`grid cellsize`}/>
             </div>
             <StyledButton
               onClick={this.generateMap}>generate map</StyledButton>

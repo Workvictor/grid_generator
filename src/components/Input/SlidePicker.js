@@ -13,7 +13,8 @@ const Bar = styled.div`
   position: relative;
 `;
 
-let relativeX, absoluteX;
+const offset = 7;
+let relativeX, absoluteX, offsetLeft, offsetWidth;
 
 export class SlidePicker extends React.Component{
 
@@ -23,11 +24,19 @@ export class SlidePicker extends React.Component{
     onChange: ()=>null,
   };
 
-  state = {
-    posX: 0,
-  };
+  constructor(props){
+    super(props);
+    this.state = {
+      posX: this.getPropsValue(props.value),
+    };
+  }
 
   targetBar = null;
+
+  componentDidMount(){
+    offsetLeft = this.targetBar.offsetLeft;
+    offsetWidth = this.targetBar.offsetWidth;
+  }
 
   componentWillUnmount(){
     window.removeEventListener(`mousemove`, this.onMousemove);
@@ -39,23 +48,38 @@ export class SlidePicker extends React.Component{
   }
 
   componentDidUpdate(){
-    const {max, min} = this.props;
     this.props.onChange({
-      value: relativeX * (max - min),
+      value: this.value,
     });
   }
+
+  componentWillReceiveProps(nextProps){
+    if (nextProps.value !== this.value){
+      this.setState({
+        posX: this.getPropsValue(nextProps.value),
+      });
+    }
+  }
+
+  get value(){
+    const {max, min} = this.props;
+    return relativeX * (max - min);
+  }
+
+  getPropsValue = (x)=>{
+    const {max, min} = this.props;
+    return x * (max - min);
+  };
 
   addListeners = ()=>{
     window.addEventListener(`mousemove`, this.onMousemove);
     window.addEventListener(`mouseup`, this.onMouseup);
   };
 
-  getPosX = ({currentTarget, clientX})=>{
+  getPosX = (clientX)=>{
 
-    const offset = 7;
-
-    const x = clientX - currentTarget.offsetLeft;
-    const width = currentTarget.offsetWidth;
+    const x = clientX - offsetLeft;
+    const width = offsetWidth;
 
     const min = offset / width;
     const max = (width - offset) / width;
@@ -72,10 +96,7 @@ export class SlidePicker extends React.Component{
   onMousemove = (event)=>{
     if (this.targetBar){
 
-      const posX = this.getPosX({
-        currentTarget: this.targetBar,
-        clientX: event.clientX,
-      });
+      const posX = this.getPosX(event.clientX);
 
       this.setState({
         posX,
@@ -94,10 +115,8 @@ export class SlidePicker extends React.Component{
   };
 
   onPickUp = (event)=>{
-
-    this.targetBar = event.currentTarget;
     this.setState({
-      posX: this.getPosX(event),
+      posX: this.getPosX(event.clientX),
     }, this.addListeners);
 
   };
@@ -106,6 +125,7 @@ export class SlidePicker extends React.Component{
     return (
       <div>
         <Bar
+          innerRef={ref=>this.targetBar = ref}
           onMouseDown={this.onPickUp}>
           <Picker
             posX={this.state.posX * 100}
