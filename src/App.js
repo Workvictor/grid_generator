@@ -27,13 +27,13 @@ const Form = styled.div`
 export class App extends React.Component{
 
   state = {
-    width: 340,
-    height: 280,
+    width: 120,
+    height: 80,
     progress: 0,
     density: 0.5,
     smooth: 2,
     buffer: [],
-    cellsize: 2,
+    cellsize: 8,
   };
 
   grid = null;
@@ -129,13 +129,13 @@ export class App extends React.Component{
                 placeholder={`grid smooth`}/>
             </div>
             <div>
+              <span>grid density </span>
+              <div>{density}</div>
               <SlidePicker
                 min={0}
                 max={1}
                 onChange={this.onDensityChange}
               />
-              <span>grid density </span>
-              <div>{density}</div>
             </div>
             <StyledButton
               onClick={this.generateMap}>generate map</StyledButton>
