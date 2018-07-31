@@ -13,7 +13,7 @@ const setBuffer = buffer=>{
 
 let smoothIteraction = 0;
 
-const eventTimeout = 40;
+const eventTimeout = 160;
 
 export class Grid{
 
@@ -112,7 +112,7 @@ export class Grid{
 
             const cell = this.getCell(row, col);
 
-            if (cell.value > 0.5){
+            if (cell && cell.value > 0.5){
               result.push(cell);
             }
 
@@ -175,10 +175,17 @@ export class Grid{
 
     const generate = ()=>{
 
-      setBuffer([]);
+      const getValue = (row, col)=>{
+        const rand = Math.random();
+        const edge = col === this.width - 1 || col === 0 || row === this.height - 1 || row === 0;
+        let result = rand > this.props.density ? 1 : 0;
+        if (edge){
+          result = 0;
+        }
+        return result;
+      };
 
-      let eventTime = window.performance.now();
-      dispatchProgressEvent();
+      setBuffer([]);
 
       const raf = new ActionFrame();
       const loop = ()=>{
@@ -186,30 +193,30 @@ export class Grid{
         const startTime = window.performance.now();
 
         while (this.fulfilled === false && window.performance.now() - startTime < 16){
-          const rand = Math.random();
+
           const row = this.convert.indexToRow(BUFFER.length);
           const col = this.convert.indexToColumn(BUFFER.length);
-          const edge = col === this.width - 1 || col === 0 || row === this.height - 1 || row === 0;
+
+          const value = getValue(row, col);
 
           BUFFER.push({
             row,
             col,
-            value: edge ? 0 : rand > this.props.density ? 1 : 0,
+            value,
           });
-        }
-
-        if (window.performance.now() - eventTime > eventTimeout){
-          eventTime = window.performance.now();
-          dispatchProgressEvent();
         }
 
 
         if (this.fulfilled){
+
           raf.stop();
+
           dispatchProgressEvent();
+
           if (this.props.smooth > 0){
             this.processing.smooth(this.props.smooth);
           }
+
         }
       };
       raf.init(loop);
@@ -218,12 +225,11 @@ export class Grid{
     const smooth = (smoothCount = 0)=>{
 
       let index = 0;
+      smoothIteraction = 0;
 
       const thresholdMax = 4;
       const thresholdMin = thresholdMax - 1;
 
-      let eventTime = window.performance.now();
-      dispatchProgressEvent();
 
       const raf = new ActionFrame();
 
@@ -241,6 +247,7 @@ export class Grid{
 
           const edge = row === 0 || col === 0 || row === this.height - 1 || col === this.width - 1;
 
+          BUFFER[index].value = Math.round(BUFFER[index].value);
 
           if (neighbors.length > thresholdMax){
             BUFFER[index].value = 1;
@@ -257,22 +264,16 @@ export class Grid{
           index++;
           smoothIteraction++;
 
-          if (window.performance.now() - eventTime > eventTimeout){
-            eventTime = window.performance.now();
-            dispatchProgressEvent();
-          }
         }
 
         if (index === this.dataLength){
           smoothCount--;
           dispatchProgressEvent();
-
           index = 0;
         }
 
         if (smoothCount === 0){
           raf.stop();
-          dispatchProgressEvent();
           index = 0;
           smoothIteraction = 0;
         }

@@ -6,6 +6,7 @@ import {Grid}         from './components/Grid';
 import {Screen}       from './components/Canvas/Screen';
 import {Canvas}       from './components/Canvas/Canvas';
 import {SlidePicker}  from './components/Input/SlidePicker';
+import {ActionFrame}  from './components/ActionFrame';
 
 
 const Wrapper = styled.div`
@@ -27,34 +28,67 @@ const Form = styled.div`
 export class App extends React.Component{
 
   state = {
-    width: 120,
-    height: 80,
+    width: 280,
+    height: 140,
     progress: 0,
     density: 0.5,
     smooth: 2,
     buffer: [],
-    cellsize: 8,
+    cellsize: 4,
   };
 
   grid = null;
+  frameBuffer = [];
 
   componentDidMount(){
     this.canvas = new Canvas(this.canvasRef);
     window.addEventListener(Grid.eventName.GridGenerateProgress, this.onGenerateProgress);
+    this.raf = new ActionFrame();
+    // this.raf.init(this.loop);
   }
 
-  componentDidUpdate(){
-    if (this.state.progress === 1){
-      this.drawGrid();
+  // componentDidUpdate(){
+  //   if (this.state.progress === 1){
+  //     this.drawGrid();
+  //   }
+  // }
+
+  loop = ()=>{
+    if (this.frameBuffer.length > 0){
+      const frame = this.frameBuffer.shift();
+      // console.log(`frame`, frame);
+      this.canvas.ctx.drawImage(frame, 0, 0);
+      if (this.frameBuffer.length === 0){
+        this.raf.stop();
+      }
     }
-  }
+  };
 
   onGenerateProgress = ({detail})=>{
     const {progress, buffer} = detail;
     this.setState({
       progress,
+      // buffer,
+    });
+    const grid = this.canvas.draw.grid({
+      ...this.state,
       buffer,
     });
+
+    this.frameBuffer.push(grid);
+    if (!this.raf.frame){
+      // console.log(`onGenerateProgress`, this.frameBuffer);
+      this.raf.init(this.loop);
+    }
+
+    // if (this.frameBuffer.length < 3){
+    //   this.frameBuffer.push(grid);
+    // }
+    // if (this.frameBuffer.length === 3){
+    //   this.frameBuffer.shift();
+    //   this.frameBuffer.push(grid);
+    // }
+    // this.canvas.ctx.drawImage(grid, 0, 0);
   };
 
   drawGrid = ()=>{
@@ -130,7 +164,7 @@ export class App extends React.Component{
             </div>
             <div>
               <span>grid density </span>
-              <div>{Math.floor(density*100)}</div>
+              <div>{Math.floor(density * 100)}</div>
               <SlidePicker
                 min={0}
                 max={1}

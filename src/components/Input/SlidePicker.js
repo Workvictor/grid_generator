@@ -54,7 +54,8 @@ export class SlidePicker extends React.Component{
   }
 
   componentWillReceiveProps(nextProps){
-    if (nextProps.value !== this.value){
+    const {max, min} = this.props;
+    if (nextProps.value !== this.state.posX*(max - min)){
       this.setState({
         posX: this.getPropsValue(nextProps.value),
       });
